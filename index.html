@@ -37,7 +37,7 @@
       </div>
       <div class="meta" id="meta">0 words • 0% of 200-word soft limit</div>
       <div class="result" id="result" aria-live="polite"></div>
-      <div class="small">Estimated water usage is approximate.</div>
+      <div class="small" id="assumptions">Assumptions: 0.001 L water/word, 0.000001 kWh/word, grid 475 gCO2/kWh. <a href="#" id="tweak">Adjust</a></div>
     </div>
   </div>
 
@@ -48,7 +48,15 @@
       const bar = document.getElementById('bar');
       const meta = document.getElementById('meta');
       const result = document.getElementById('result');
+      const assumptionsEl = document.getElementById('assumptions');
+      const tweakLink = document.getElementById('tweak');
+
       const SOFT_LIMIT = 200;
+
+      // Adjustable constants (change here or add UI to tweak)
+      let LITERS_PER_WORD = 0.001;       // liters per word
+      let KWH_PER_WORD = 1e-6;          // kWh per word
+      let GRID_G_PER_KWH = 475;         // grams CO2 per kWh (grid intensity)
 
       function countWords(text){
         if(!text) return 0;
@@ -63,20 +71,37 @@
         meta.textContent = `${words} word${words===1? '': 's'} • ${pct}% of ${SOFT_LIMIT}-word soft limit`;
       }
 
-      function formatNumber(n){
-        return n.toLocaleString(undefined, {maximumFractionDigits:3});
+      function formatNumber(n, digits = 3){
+        return Number(n).toLocaleString(undefined, {maximumFractionDigits:digits});
       }
 
-      button.addEventListener('click', function(){
+      function computeAndShow(){
         const words = countWords(textarea.value);
-        // Conversion used here: 0.001 liters (1 mL) per word (approximate)
-        const litersPerWord = 0.001;
-        const liters = words * litersPerWord;
+        const liters = words * LITERS_PER_WORD;
         const milliliters = liters * 1000;
-        result.innerHTML = `${words} word${words===1? '': 's'} — Estimated water used: <strong>${formatNumber(liters)} L</strong> (${formatNumber(milliliters)} mL)`;
+
+        const kwh = words * KWH_PER_WORD;
+        const joules = kwh * 3.6e6;
+
+        const co2g = kwh * GRID_G_PER_KWH;
+
+        result.innerHTML = `\n+          ${words} word${words===1? '': 's'} —\n+          <div>Water: <strong>${formatNumber(liters)} L</strong> (${formatNumber(milliliters)} mL)</div>\n+          <div>Electricity: <strong>${formatNumber(kwh,6)} kWh</strong> (${formatNumber(joules,0)} J)</div>\n+          <div>CO₂: <strong>${formatNumber(co2g,6)} g</strong></div>`;
         updateProgress();
+      }
+
+      // Toggle a simple prompt to tweak constants inline
+      tweakLink.addEventListener('click', function(e){
+        e.preventDefault();
+        const newLit = prompt('Liters per word', LITERS_PER_WORD);
+        const newKwh = prompt('kWh per word', KWH_PER_WORD);
+        const newGrid = prompt('gCO2 per kWh (grid)', GRID_G_PER_KWH);
+        if(newLit !== null) LITERS_PER_WORD = Math.max(0, parseFloat(newLit) || LITERS_PER_WORD);
+        if(newKwh !== null) KWH_PER_WORD = Math.max(0, parseFloat(newKwh) || KWH_PER_WORD);
+        if(newGrid !== null) GRID_G_PER_KWH = Math.max(0, parseFloat(newGrid) || GRID_G_PER_KWH);
+        assumptionsEl.textContent = `Assumptions: ${LITERS_PER_WORD} L water/word, ${KWH_PER_WORD} kWh/word, grid ${GRID_G_PER_KWH} gCO2/kWh.`;
       });
 
+      button.addEventListener('click', computeAndShow);
       textarea.addEventListener('input', updateProgress);
       updateProgress();
     })();
