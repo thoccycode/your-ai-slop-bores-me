@@ -1,36 +1,85 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Hello World Test App</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CostGPT</title>
   <style>
-    :root { --bg: #f5f7fa; --accent: #111; }
-    html,body { height:100%; margin:0; background:var(--bg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color:var(--accent); transition: background 0.6s ease; }
-    .wrap { min-height:100%; display:flex; align-items:center; justify-content:center; }
-    .card { text-align:center; padding:3rem; border-radius:12px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); background: rgba(255,255,255,0.6); backdrop-filter: blur(4px); }
-    h1 { font-size: clamp(2.5rem, 6vw, 4rem); margin:0 0 1.5rem; }
-    button { padding:0.75rem 1.25rem; font-size:1rem; border: none; border-radius:8px; background:#111; color:#fff; cursor:pointer; transition: transform .08s ease, opacity .08s; }
-    button:active{ transform: translateY(1px) scale(.998); }
+    :root{--bg:#f3f6fb;--card:#ffffff;--accent:#3b82f6;--muted:#6b7280}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,system-ui,-apple-system,Roboto,"Helvetica Neue",Arial}
+    body{display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#eef2ff,#f8fafc);padding:24px}
+    .container{width:720px;max-width:96vw;background:var(--card);padding:32px;border-radius:12px;box-shadow:0 8px 30px rgba(16,24,40,0.08);text-align:center}
+    h1{margin:0 0 18px;font-size:48px;color:#0f172a;letter-spacing:-1px}
+    .form{display:flex;gap:12px;align-items:flex-start}
+    textarea{flex:1;min-height:120px;resize:vertical;padding:12px 14px;border-radius:8px;border:1px solid #e6edf3;font-size:16px}
+    button{background:var(--accent);color:#fff;border:0;padding:12px 18px;border-radius:8px;font-size:16px;cursor:pointer}
+    button:active{transform:translateY(1px)}
+    .progress-wrap{margin-top:12px;text-align:left}
+    .progress{height:12px;background:#e6eefc;border-radius:999px;overflow:hidden}
+    .bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#60a5fa);transition:width 240ms ease}
+    .meta{margin-top:10px;color:var(--muted);font-size:14px}
+    .result{margin-top:16px;font-weight:600;color:#0b1220;font-size:16px}
+    .small{font-size:13px;color:var(--muted);margin-top:6px}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>Hello World</h1>
-      <button id="changeBtn">Change background</button>
+  <div class="container">
+    <h1>CostGPT</h1>
+    <div class="form">
+      <textarea id="prompt" placeholder="Type your prompt here..."></textarea>
+      <button id="done">Done</button>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress" aria-hidden>
+        <div class="bar" id="bar"></div>
+      </div>
+      <div class="meta" id="meta">0 words • 0% of 200-word soft limit</div>
+      <div class="result" id="result" aria-live="polite"></div>
+      <div class="small">Estimated water usage is approximate.</div>
     </div>
   </div>
+
   <script>
-    function randomColor(){
-      const h = Math.floor(Math.random()*360);
-      const s = 60 + Math.floor(Math.random()*20);
-      const l = 45 + Math.floor(Math.random()*15);
-      return `hsl(${h}, ${s}%, ${l}%)`;
-    }
-    document.getElementById('changeBtn').addEventListener('click', ()=> {
-      document.body.style.background = randomColor();
-    });
+    (function(){
+      const textarea = document.getElementById('prompt');
+      const button = document.getElementById('done');
+      const bar = document.getElementById('bar');
+      const meta = document.getElementById('meta');
+      const result = document.getElementById('result');
+      const SOFT_LIMIT = 200;
+
+      function countWords(text){
+        if(!text) return 0;
+        const matches = text.trim().match(/\S+/g);
+        return matches ? matches.length : 0;
+      }
+
+      function updateProgress(){
+        const words = countWords(textarea.value);
+        const pct = Math.min(100, Math.round((words / SOFT_LIMIT) * 100));
+        bar.style.width = pct + '%';
+        meta.textContent = `${words} word${words===1? '': 's'} • ${pct}% of ${SOFT_LIMIT}-word soft limit`;
+      }
+
+      function formatNumber(n){
+        return n.toLocaleString(undefined, {maximumFractionDigits:3});
+      }
+
+      button.addEventListener('click', function(){
+        const words = countWords(textarea.value);
+        // Conversion used here: 0.001 liters (1 mL) per word (approximate)
+        const litersPerWord = 0.001;
+        const liters = words * litersPerWord;
+        const milliliters = liters * 1000;
+        result.innerHTML = `${words} word${words===1? '': 's'} — Estimated water used: <strong>${formatNumber(liters)} L</strong> (${formatNumber(milliliters)} mL)`;
+        updateProgress();
+      });
+
+      textarea.addEventListener('input', updateProgress);
+      updateProgress();
+    })();
   </script>
 </body>
 </html>
