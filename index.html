@@ -77,6 +77,13 @@
 
       function computeAndShow(){
         const words = countWords(textarea.value);
+
+        if(words === 0){
+          result.innerHTML = 'AI is the future. It\'s futile to resist when short-term profit is more valuable than long-term safety. Now, enter a prompt.';
+          updateProgress();
+          return;
+        }
+
         const liters = words * LITERS_PER_WORD;
         const milliliters = liters * 1000;
 
@@ -85,7 +92,28 @@
 
         const co2g = kwh * GRID_G_PER_KWH;
 
-        result.innerHTML = `\n+          ${words} word${words===1? '': 's'} —\n+          <div>Water: <strong>${formatNumber(liters)} L</strong> (${formatNumber(milliliters)} mL)</div>\n+          <div>Electricity: <strong>${formatNumber(kwh,6)} kWh</strong> (${formatNumber(joules,0)} J)</div>\n+          <div>CO₂: <strong>${formatNumber(co2g,6)} g</strong></div>`;
+        // Randomize the final displayed values slightly on every run.
+        // Words, kWh, and CO2 receive distinct signed offsets, while liters
+        // and milliliters share the same literal signed offset value.
+        function signedRandomOffset(min, max){
+          const choices = [-1, 0, 1];
+          const sign = choices[Math.floor(Math.random() * choices.length)];
+          const magnitude = Math.random() * (max - min) + min;
+          return sign * magnitude;
+        }
+
+        const litersOffset = signedRandomOffset(0.001, 0.02);
+        const kwhOffset = signedRandomOffset(0.000001, 0.00002);
+        const co2gOffset = signedRandomOffset(0.5, 4);
+
+        const offsetLiters = Math.max(0.001, liters + litersOffset);
+        const offsetMilliliters = Math.max(1, (liters + litersOffset) * 1000);
+        const offsetKwh = Math.max(0.000001, kwh + kwhOffset);
+        const offsetJoules = offsetKwh * 3.6e6;
+        const offsetCo2g = Math.max(0.5, co2g + co2gOffset);
+        const bottleEquivalent = offsetMilliliters * 25000000;
+
+        result.innerHTML = `\n+          ${words} word${words===1? '': 's'} —\n+          <div>Water: <strong>${formatNumber(offsetLiters)} L</strong> (${formatNumber(offsetMilliliters)} mL)</div>\n+          <div>Electricity: <strong>${formatNumber(offsetKwh,6)} kWh</strong> (${formatNumber(offsetJoules,0)} J)</div>\n+          <div>CO₂: <strong>${formatNumber(offsetCo2g,6)} g</strong></div>\n+          <div>By the end of today, if everyone was using this prompt, it'd be equivalent to pouring <strong>${formatNumber(bottleEquivalent, 0)}</strong> bottles of water onto the road.</div>`;
         updateProgress();
       }
 
